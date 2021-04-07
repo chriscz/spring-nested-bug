@@ -1,0 +1,6 @@
+#!/bin/bash
+source tmp/test-preamble
+
+start_spring
+cd nested
+rails_test

@@ -1,0 +1,7 @@
+#!/bin/bash
+set -u
+git bisect reset
+git bisect start
+git bisect bad "$BAD_REVISION"
+git bisect good "$GOOD_REVISION"
+git bisect run "./tmp/$TEST_SCRIPT" | tee -a "$LOGFILE"

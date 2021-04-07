@@ -1,0 +1,86 @@
+#!/bin/bash
+set -eou pipefail
+
+LOG="$LOGFILE"
+REVISION=`git rev-parse --short HEAD`
+
+function print_header() {
+    echo -n "$1 "
+    printf "%0.s=" {1..75}
+    echo
+}
+
+function notice () {
+    echo  '* ' "$1"
+}
+
+function monkey_patch_spring() {
+    notice "Monkey-patch bin/spring constant check"
+    git reset --hard &>> "$LOG"
+    sed -i -e 's/if defined?(Spring)/if false/' bin/spring &>> "$LOG"
+}
+
+function stop_spring() {
+    notice "Stop spring"
+    (bundle exec spring stop || true) &>> "$LOG"
+}
+
+function start_spring() {
+    notice "Start spring explicitly"
+    bundle exec spring &>> "$LOG"
+}
+
+function bundle_install() {
+    notice "Re-install bundle"
+    rm Gemfile.lock
+    bundle install &>> "$LOG"
+}
+
+function regenerate_binstubs() {
+    notice "Regenerate binstubs"
+    bundle exec spring binstub --remove --all &>> "$LOG"
+    bundle exec spring binstub --all &>> "$LOG"
+}
+
+function rails_test() {
+    notice "Run test: bundle exec spring rails test"
+    if ! bundle exec spring rails test; then
+        echo
+        exit 1
+    fi
+}
+
+function install_gems() {
+    notice "Install gems for testing"
+    bundle install &>> "$LOG"
+}
+
+function generate_test_app() {
+    install_gems
+    notice "Run rails new foo"
+    (cd tmp && rails new foo --skip-javascript --skip-bundle && sed -i -e "s/gem 'spring'/gem 'spring', path: '..\/..\/'/" foo/Gemfile) &>> "$LOG"
+    (cd tmp/foo && bin/setup) &>> "$LOG"
+    notice "Ensure spring in Gemfile"
+    if ! $(grep "gem 'spring'" tmp/foo/Gemfile > /dev/null); then
+        notice "Spring not found in Gemfile!"
+        exit 128
+    fi
+    mkdir -p tmp/foo/nested
+}
+
+print_header $REVISION
+
+monkey_patch_spring
+
+if [ ! -e tmp/foo ]; then generate_test_app; fi
+
+cd tmp/foo
+
+stop_spring
+bundle_install
+
+stop_spring
+regenerate_binstubs
+
+stop_spring
+set +eou pipefail # Disable bash strict-mode
