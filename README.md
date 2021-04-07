@@ -1,3 +1,4 @@
+## Running it
 1. Runing make will:
   - clone spring directory
   - create a `tmp` directory under it
@@ -13,5 +14,5 @@
 
 4. Run `make clean` to remove the spring directory
 
-## Beware
-This script kills processes containing the word `spring` in their name
+## Test Environment
+Ubuntu 20.04
