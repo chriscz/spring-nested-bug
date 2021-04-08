@@ -58,21 +58,26 @@ function install_gems() {
 function generate_test_app() {
     install_gems
     notice "Run rails new foo"
-    (cd tmp && rails new foo --skip-javascript --skip-bundle && sed -i -e "s/gem 'spring'/gem 'spring', path: '..\/..\/'/" foo/Gemfile) &>> "$LOG"
-    (cd tmp/foo && bin/setup) &>> "$LOG"
+
+    (bundle exec rails new foo --skip-javascript --skip-bundle && sed -i -e "s/gem 'spring'/gem 'spring', path: '..\/..\/'/" foo/Gemfile) &>> "$LOG"
+
+    mkdir -p foo/nested
+
+    (cd foo && bin/setup) &>> "$LOG"
+
     notice "Ensure spring in Gemfile"
-    if ! $(grep "gem 'spring'" tmp/foo/Gemfile > /dev/null); then
+
+    if ! $(grep "gem 'spring'" foo/Gemfile > /dev/null); then
         notice "Spring not found in Gemfile!"
         exit 128
     fi
-    mkdir -p tmp/foo/nested
 }
 
 print_header $REVISION
 
 monkey_patch_spring
 
-if [ ! -e tmp/foo ]; then generate_test_app; fi
+if [ ! -e tmp/foo ]; then (cd tmp && generate_test_app); fi
 
 cd tmp/foo
 
