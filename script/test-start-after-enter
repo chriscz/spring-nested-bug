@@ -1,5 +1,5 @@
 #!/bin/bash
-source tmp/test-preamble
+source ../script/test-preamble
 
 cd nested
 rails_test

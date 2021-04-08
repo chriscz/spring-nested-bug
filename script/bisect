@@ -1,7 +1,11 @@
 #!/bin/bash
 set -u
+cd "$SPRING_REPO_PATH"
+
+git reset --hard
 git bisect reset
+
 git bisect start
 git bisect bad "$BAD_REVISION"
 git bisect good "$GOOD_REVISION"
-git bisect run "./tmp/$TEST_SCRIPT" | tee -a "$LOGFILE"
+git bisect run "../script/$TEST_SCRIPT" | tee -a "$LOGFILE"

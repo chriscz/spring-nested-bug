@@ -1,5 +1,6 @@
 #!/bin/bash
 set -eou pipefail
+# This script runs within spring directory.
 
 LOG="$LOGFILE"
 REVISION=`git rev-parse --short HEAD`
@@ -17,7 +18,7 @@ function notice () {
 function monkey_patch_spring() {
     notice "Monkey-patch bin/spring constant check"
     git reset --hard &>> "$LOG"
-    sed -i -e 's/if defined?(Spring)/if false/' bin/spring &>> "$LOG"
+    sed -i -e 's/if defined?(Spring)/if false/' "$SPRING_REPO_PATH/bin/spring" &>> "$LOG"
 }
 
 function stop_spring() {
@@ -50,24 +51,18 @@ function rails_test() {
     fi
 }
 
-function install_gems() {
-    notice "Install gems for testing"
-    bundle install &>> "$LOG"
-}
-
 function generate_test_app() {
-    install_gems
-    notice "Run rails new foo"
+    notice "Run: rails new $1 in $PWD"
 
-    (bundle exec rails new foo --skip-javascript --skip-bundle && sed -i -e "s/gem 'spring'/gem 'spring', path: '..\/..\/'/" foo/Gemfile) &>> "$LOG"
+    (bundle exec rails new "$1" --skip-javascript --skip-bundle && sed -i -e "s;gem 'spring';gem 'spring', path: '$SPRING_REPO_PATH';" "$1/Gemfile") &>> "$LOG"
 
-    mkdir -p foo/nested
+    mkdir -p "$1/nested"
 
-    (cd foo && bin/setup) &>> "$LOG"
+    (cd "$1" && bin/setup) &>> "$LOG"
 
     notice "Ensure spring in Gemfile"
 
-    if ! $(grep "gem 'spring'" foo/Gemfile > /dev/null); then
+    if ! $(grep "gem 'spring'" "$1/Gemfile" > /dev/null); then
         notice "Spring not found in Gemfile!"
         exit 128
     fi
@@ -77,9 +72,9 @@ print_header $REVISION
 
 monkey_patch_spring
 
-if [ ! -e tmp/foo ]; then (cd tmp && generate_test_app); fi
+if [ ! -e "$APP_PATH" ]; then (cd "$APP_DIRNAME" && generate_test_app "$APP_NAME"); fi
 
-cd tmp/foo
+cd "$APP_PATH"
 
 stop_spring
 bundle_install
